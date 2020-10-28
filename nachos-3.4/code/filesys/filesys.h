@@ -35,38 +35,72 @@
 #ifndef FS_H
 #define FS_H
 
+#include "string.h"
 #include "copyright.h"
 #include "openfile.h"
-
+typedef int OpenFileID;
 #ifdef FILESYS_STUB 		// Temporarily implement file system calls as 
-				// calls to UNIX, until the real file system
-				// implementation is available
+							// calls to UNIX, until the real file system
+							// implementation is available
 class FileSystem {
   public:
-    FileSystem(bool format) {}
+  	OpenFile** openFiles;
+	int size;
+	static const int maxFile = 10;
 
-    bool Create(char *name, int initialSize) { 
-	int fileDescriptor = OpenForWrite(name);
-
-	if (fileDescriptor == -1) return FALSE;
-	Close(fileDescriptor); 
-	return TRUE; 
+    FileSystem(bool format) {
+		openFiles = new OpenFile*[maxFile];
+		size = 0;
+		for(int i = 0;i < maxFile;i++)
+			openFiles[i] = NULL;
+		if(Create("stdin", 0)){
+			openFiles[size++] = this->Open("stdin", 2);
+		}
+		if(Create("stdin", 0)){
+			openFiles[size++] = this->Open("stdout", 3);
+		}
 	}
 
-    OpenFile* Open(char *name) {
-	  int fileDescriptor = OpenForReadWrite(name, FALSE);
+    bool Create(char *name, int initialSize) { 
+		int fileDescriptor = OpenForWrite(name);
+		if (fileDescriptor == -1) return FALSE;
+		Close(fileDescriptor); 
+		return TRUE; 
+	}
 
-	  if (fileDescriptor == -1) return NULL;
-	  return new OpenFile(fileDescriptor);
-      }
+    OpenFile* Open(char *name){
+		int fileDescriptor = OpenForReadWrite(name, FALSE);
+
+		if (fileDescriptor == -1) return NULL;
+		size++;
+		return new OpenFile(fileDescriptor);
+	}
+
+    OpenFile* Open(char *name, int type){
+		int fileDescriptor = OpenForReadWrite(name, FALSE);
+
+		if (fileDescriptor == -1) return NULL;
+		size++;
+		return new OpenFile(fileDescriptor, type);
+	}
 
     bool Remove(char *name) { return Unlink(name) == 0; }
 
+	~FileSystem(){
+		for(int i = 0;i<maxFile;i++){
+			if(openFiles[i] != NULL)
+				delete openFiles[i];
+		}
+		delete[] openFiles;
+	}
 };
 
 #else // FILESYS
 class FileSystem {
   public:
+  	OpenFile** openFiles;
+	int size;
+	static const int maxFile = 10;
     FileSystem(bool format);		// Initialize the file system.
 					// Must be called *after* "synchDisk" 
 					// has been initialized.
@@ -78,6 +112,7 @@ class FileSystem {
 					// Create a file (UNIX creat)
 
     OpenFile* Open(char *name); 	// Open a file (UNIX open)
+	OpenFile* Open(char* name, int type);
 
     bool Remove(char *name);  		// Delete a file (UNIX unlink)
 
