@@ -139,6 +139,16 @@ FileSystem::FileSystem(bool format)
     // the bitmap and directory; these are left open while Nachos is running
         freeMapFile = new OpenFile(FreeMapSector);
         directoryFile = new OpenFile(DirectorySector);
+	openFiles = new OpenFile*[maxFile];
+	size = 0;
+	for(int i = 0;i < maxFile;i++)
+		openFiles[i] = NULL;
+	if(Create("stdin", 0)){
+		openFiles[size++] = this->Open("stdin", 2);
+	}
+	if(Create("stdin", 0)){
+		openFiles[size++] = this->Open("stdout", 3);
+	}
     }
 }
 
@@ -228,18 +238,35 @@ OpenFile *
 FileSystem::Open(char *name)
 { 
     Directory *directory = new Directory(NumDirEntries);
-    OpenFile *openFile = NULL;
     int sector;
 
     DEBUG('f', "Opening file %s\n", name);
     directory->FetchFrom(directoryFile);
     sector = directory->Find(name); 
-    if (sector >= 0) 		
-	openFile = new OpenFile(sector);	// name was found in directory 
+    if (sector >= 0){
+		openFiles[size++] = new OpenFile(sector);	// name was found in directory 
+		return openFile[size-1];
+	}
     delete directory;
     return openFile;				// return NULL if not found
 }
 
+OpenFile *
+FileSystem::Open(char *name, int type)
+{ 
+    Directory *directory = new Directory(NumDirEntries);
+    int sector;
+
+    DEBUG('f', "Opening file %s\n", name);
+    directory->FetchFrom(directoryFile);
+    sector = directory->Find(name); 
+    if (sector >= 0){
+		openFiles[size++] = new OpenFile(sector, type);	// name was found in directory 
+		return openFile[size-1];
+	}
+    delete directory;
+    return openFile;				// return NULL if not found
+}
 //----------------------------------------------------------------------
 // FileSystem::Remove
 // 	Delete a file from the file system.  This requires:
