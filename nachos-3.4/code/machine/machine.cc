@@ -212,3 +212,46 @@ void Machine::WriteRegister(int num, int value)
 	registers[num] = value;
     }
 
+
+char* Machine::User2System(int virtAddr, int limit)      //Read file
+{
+	int i; //index
+	int oneChar;
+	char* kernelBuf = NULL;
+	kernelBuf = new char[limit + 1]; //need for terminal string
+	if(kernelBuf == NULL)
+		return kernelBuf;
+	memset(kernelBuf, 0, limit + 1);
+	//printf("\n Filename u2s:");
+	for(i = 0;i < limit;i++)
+	{
+		machine->ReadMem(virtAddr+i,1,&oneChar);
+		kernelBuf[i] = (char)oneChar;
+		if(oneChar == 0)
+			break;
+        if(oneChar == '\n'){
+            kernelBuf[i + 1] = 0;
+            break;
+        }
+	}
+	return kernelBuf;
+}
+
+// Input: - User space address (int)
+// - Limit of buffer (int)
+// - Buffer (char[])
+// Output:- Number of bytes copied (int)
+// Purpose: Copy buffer from System memory space to User memory space
+int Machine::System2User(int virtAddr,int len,char* buffer)  //Write file
+{
+		if (len < 0) return -1;
+		if (len == 0)return len;
+		int i = 0;
+		int oneChar = 0;
+		do{
+				oneChar= (int) buffer[i];
+				machine->WriteMem(virtAddr+i,1,oneChar);
+				i++;
+		}while(i < len && oneChar != 0);
+		return i;
+}

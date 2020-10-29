@@ -116,27 +116,36 @@ class Machine {
     int ReadRegister(int num);	// read the contents of a CPU register
 
     void WriteRegister(int num, int value);
-				// store a value into a CPU register
+    // store a value into a CPU register
+    /*copy buffer from user to system*/
+    //		input: 
+    //			-userspace address : int
+    //			-limit of buffer: int
+    //		output:	-buffer: char* 
+    char* User2System(int virtaddr, int limit);
+    /*copy buffer from system to user*/
+    //		input: 
+    //			-userspace address : int
+    //			-limit of buffer: int
+    //			- buffer: char[]
+    //		output:	-number of bytes copied: char* 
+    int  System2User(int virtaddr, int len, char* buffer);
+    // Routines internal to the machine simulation -- DO NOT call these 
 
-
-// Routines internal to the machine simulation -- DO NOT call these 
-
-    void OneInstruction(Instruction *instr); 	
-    				// Run one instruction of a user program.
-    void DelayedLoad(int nextReg, int nextVal);  	
-				// Do a pending delayed load (modifying a reg)
+    void OneInstruction(Instruction *instr); 	// Run one instruction of a user program.
+    void DelayedLoad(int nextReg, int nextVal);  	// Do a pending delayed load (modifying a reg)
     
     bool ReadMem(int addr, int size, int* value);
     bool WriteMem(int addr, int size, int value);
-    				// Read or write 1, 2, or 4 bytes of virtual 
+                // Read or write 1, 2, or 4 bytes of virtual 
 				// memory (at addr).  Return FALSE if a 
 				// correct translation couldn't be found.
     
     ExceptionType Translate(int virtAddr, int* physAddr, int size,bool writing);
-    				// Translate an address, and check for 
+                // Translate an address, and check for 
 				// alignment.  Set the use and dirty bits in 
 				// the translation entry appropriately,
-    				// and return an exception code if the 
+                // and return an exception code if the 
 				// translation couldn't be completed.
 
     void RaiseException(ExceptionType which, int badVAddr);

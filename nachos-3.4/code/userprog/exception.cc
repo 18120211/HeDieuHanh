@@ -24,7 +24,9 @@
 #include "copyright.h"
 #include "system.h"
 #include "syscall.h"
-#define MaxFileLength 32
+#include "string.h"
+#define MAX_FILE_LENGTH 32
+#define MAX_STRING_LENGTH 100
 
 //----------------------------------------------------------------------
 // ExceptionHandler
@@ -49,146 +51,272 @@
 //	are in machine.h.
 //----------------------------------------------------------------------
 
-char* User2System(int Address, int limit)
-{
-	int i; //index
-	int oneChar;
-	char* kernelBuffer = NULL;
-	kernelBuffer = new char[limit + 1]; //need for terminal string
-	if(kernelBuffer == NULL)
-		return kernelBuffer;
-	memset(kernelBuffer, 0, limit + 1);
-	//printf("\n Filename u2s:");
-	for(i = 0;i < limit;i++)
-	{
-		machine->ReadMem(Address+i,1,&oneChar);
-		kernelBuffer[i] = (char)oneChar;
-		//printf("%c", kernelBuffer[i]);
-		if(oneChar == 0)
-			break;
-	}
-	return kernelBuffer;
+int getArg(int i){
+	return machine->ReadRegister(i+3);
 }
 
-// Input: - User space address (int)
-// - Limit of Bufferfer (int)
-// - Bufferfer (char[])
-// Output:- Number of bytes copied (int)
-// Purpose: Copy Bufferfer from System memory space to User memory space
-int System2User(int Address,int len,char* Bufferfer)
-{
-		if (len < 0) return -1;
-		if (len == 0)return len;
-		int i = 0;
-		int oneChar = 0 ;
-		do{
-				oneChar= (int) Bufferfer[i];
-				machine->WriteMem(Address+i,1,oneChar);
-				i++;
-		}while(i < len && oneChar != 0);
-		return i;
-}
+//   char* User2System(int virtAddr, int limit)      //Read file
+//   {
+//       int i; //index
+//       int oneChar;
+//       char* kernelBuf = NULL;
+//       kernelBuf = new char[limit + 1]; //need for terminal string
+//       if(kernelBuf == NULL)
+//           return kernelBuf;
+//       memset(kernelBuf, 0, limit + 1);
+//       //printf("\n Filename u2s:");
+//       for(i = 0;i < limit;i++)
+//       {
+//           machine->ReadMem(virtAddr+i,1,&oneChar);
+//           kernelBuf[i] = (char)oneChar;
+//           //printf("%c", kernelBuf[i]);
+//           if(oneChar == 0)
+//               break;
+//       }
+//       return kernelBuf;
+//   }
+//
+//   // Input: - User space address (int)
+//   // - Limit of buffer (int)
+//   // - Buffer (char[])
+//   // Output:- Number of bytes copied (int)
+//   // Purpose: Copy buffer from System memory space to User memory space
+//   int System2User(int virtAddr,int len,char* buffer)  //Write file
+//   {
+//           if (len < 0) return -1;
+//           if (len == 0)return len;
+//           int i = 0;
+//           int oneChar = 0;
+//           do{
+//                   oneChar= (int) buffer[i];
+//                   machine->WriteMem(virtAddr+i,1,oneChar);
+//                   i++;
+//           }while(i < len && oneChar != 0);
+//           return i;
+//   }
 
-//Increment Program Counter Register
-void IncPCReg()
-{
-	int PC_Register = machine->ReadRegister(PCReg);
-	int Next_PC_Register = machine->ReadRegister(NextPCReg);
-	machine->WriteRegister(PrevPCReg, PC_Register);
-	machine->WriteRegister(PCReg, Next_PC_Register);
-	machine->WriteRegister(NextPCReg, Next_PC_Register + 4);
-}
-
-void CreateFileSysCallHandler()
-{
-	int Address;
+void CreateFileSyscallHandler(){
+	int virtAddr;
 	char* filename;
 
 	DEBUG('a',"\n SC_Create call ...");
 	DEBUG('a',"\n Reading virtual address of filename");
-	// Lấy tham số tên tập tin từ thanh ghi r4
-	Address = machine->ReadRegister(4);
+	virtAddr = machine->ReadRegister(4);
 	DEBUG ('a',"\n Reading filename.");
-	filename = User2System(Address,MaxFileLength+1);
+	filename = machine->User2System(virtAddr, MAX_FILE_LENGTH + 1);
 	if (filename == NULL)
 	{
-			printf("\n Not enough memory in system");
-			DEBUG('a',"\n Not enough memory in system");
-			machine->WriteRegister(2,-1); // trả về lỗi cho chương trình người dùng
-			delete filename;
-			return;
+        printf("\n Not enough memory in system");
+        DEBUG('a',"\n Not enough memory in system");
+        machine->WriteRegister(2,-1); // trả về lỗi cho chương trình người dùng
+        delete[] filename;
+        return;
 	}
 	DEBUG('a',"\n Finish reading filename.");
-	if (!fileSystem->Create(filename,0))
-	{
-			printf("\n Error create file '%s'",filename);
-			machine->WriteRegister(2,-1);
-			delete filename;
-			return;
+	if (!fileSystem->Create(filename,0)){
+        printf("\n Error create file '%s'",filename);
+        machine->WriteRegister(2,-1);
+        delete[] filename;
+        return;
 	}
 	machine->WriteRegister(2,0); // trả về cho chương trình
-	delete filename;
+	delete[] filename;
 }
 
-void OpenFileSyscallHandler(){}
-void CloseFileSyscallHandler(){}
+//OpenFileID Open(char* name, int type)
+void OpenFileSyscallHandler(){
+    int virtAddr = getArg(1);
+    int type = getArg(2);
+    if (fileSystem->size > 10) {
+        machine->WriteRegister(2, -1);
+        return;
+    }
+
+    char *buffer;
+    buffer = machine->User2System(virtAddr, MAX_FILE_LENGTH);
+    if (strcmp(buffer, "stdin") == 0) {
+        printf("stdin mode\n");
+        machine->WriteRegister(2, 0);
+        delete[] buffer;
+        return;
+    }
+    if (strcmp(buffer ,"stdout") == 0) {
+        printf("stdout mode\n");
+        machine->WriteRegister(2, 1);
+        delete[] buffer;
+        return;
+    }
+    
+    int fileID = fileSystem->Open(buffer, type);
+    if (fileID != -1){
+        DEBUG('f',"open file successfully");
+        printf("Mo file id = %d thanh cong\n", fileID);
+        machine->WriteRegister(2, fileID);
+    } 
+    else {
+        DEBUG('f',"can not open file");
+        machine->WriteRegister(2, -1);
+    }
+    delete[] buffer;
+}
+
+//int Close(OpenFileID id)
+void CloseFileSyscallHandler(){
+    int fileID = getArg(1);
+    if (fileSystem->openFiles[fileID] == NULL) 
+        return;
+    delete fileSystem->openFiles[fileID];
+    fileSystem->openFiles[fileID] = NULL;
+    fileSystem->size--;
+    return;
+}
+
 void ReadFileSyscallHandler(){
 	// int Read(char *buffer, int charcount, OpenFileID id)
 	// Return -1: FAIL
 	// Return So byte doc duoc: Succeed
 	// Return -2: Thanh cong
-	int PrevAddress;
-	int NextAddress;
-	char *Buffer;	
-	int Address = machine->ReadRegister(4); // Address = gia tri thanh ghi 4
-	int CharCounter = machine->ReadRegister(5); // CharCounter = gia tri thanh ghi so 5
-	int id = machine->ReadRegister(6); // Lay id cua file tu thanh ghi so 6 
-	
-	if (fileSystem->openf[identifier] == NULL){// File khong ton tai tra ve -1 
-		printf("File khong ton tai");
-		machine->WriteRegister(2, -1);
-		IncreasePC();
-		return;
-	}
-	if (fileSystem->openf[identifier]->type == 3) {// Xet truong hop doc file stdout (type quy uoc la 3) thi tra ve -1 
-		printf("File loai STDOUT nen khong doc duoc");
-		machine->WriteRegister(2, -1);
-		IncreasePC();
-		return;
-	}
-	if (identifier > 14 || identifier < 0) {// identifier nam ngoai pham vi thi tra ve -1
-		printf("File khong phu hop");
-		machine->WriteRegister(2, -1);
-		IncreasePC();
-		return;
-	}
-	
-	PrevAddress = fileSystem->openf[identifier]->GetCurrentPos(); // Luu gia tri file vua mo vao PrevAddress
-	Buffer = User2System(Address, CharCounter); // Chuyen du lieu la vung nho Buffer co CharCounter byte tu Usermode->Systemode
-	if (fileSystem->openf[identifier]->type == 2) {
-		length
-		int length = gSynchConsole->Read(Buffer, CharCounter); //length = so byte doc duoc tu thang Buffer
-		System2User(Address, length, Buffer); // Chuyen du lieu la vung nho Buffer co length byte tu Systemmode->Usermode
-		machine->WriteRegister(2, length); // Thanh ghi so 2 luu gia tri so byte doc duoc
-		delete Buffer;
-		IncreasePC();
-		return;
-	}
-	if ((fileSystem->openf[identifier]->Read(Buffer, CharCounter)) > 0)  {// Doc file thanh cong voi so ky tu doc duoc > 0
-		NextAddress = fileSystem->openf[identifier]->GetCurrentPos(); // So byte doc duoc = NextAddress - PrevAddress
-		System2User(Address, NextAddress - PrevAddress, Buffer); // Chuyen du lieu tu la chuoi Buffer co so byte = so byte doc duoc tu Systemspace sang Userspace
-		machine->WriteRegister(2, NextAddress - PrevAddress);
-	}
-	else {
-		//Doc duoc file co do dai = 0;
-		printf("File rong");
-		machine->WriteRegister(2, -2);
-	}
-	delete Buffer;
-	IncreasePC();
-	return;
+    int PrevAddress;
+    int NextAddress;
+    int Address = getArg(1);                               //Address = gia tri thanh ghi 4
+    int CharCounter = getArg(2);                           //CharCounter = gia tri thanh ghi so 5
+    int id = getArg(3);                                    //Lay id cua file tu thanh ghi so 6
+    if (fileSystem->openFiles[id] == NULL) {               //File khong ton tai tra ve -1
+        printf("File co id = %d khong ton tai\n", id);
+        machine->WriteRegister(2, -1);
+        return;
+    }
+
+    if (id < 0 || id > MAX_OPEN_FILE) {
+        printf("File khong phu hop");
+        machine->WriteRegister(2, -1);
+        return;
+    }
+
+    if(fileSystem->openFiles[id]->type == 3){               //Xet truong hop doc stdout
+        printf("File loai stdout nen khong doc duoc\n");
+        machine->WriteRegister(2, -1);
+        return;
+    }
+
+    char *Buffer = new char[CharCounter + 1];
+    PrevAddress = fileSystem->openFiles[id]->GetCurrentPos();   //Luu lai vi tri con tro file
+    //Buffer = machine->User2System(Address, CharCounter);        //Doc du lieu vao Buffer
+    if (fileSystem->openFiles[id]->type == 2) {                 //Doc qua stdin
+        int length = gSynchConsole->Read(Buffer, CharCounter);  //length so byte thuc te 
+        machine->System2User(Address, length, Buffer);          //Chuyen du lieu System->User
+        machine->WriteRegister(2, length);                      //tra ve so byte doc duoc
+        delete[] Buffer;
+        return;
+    }
+    
+    if ((fileSystem->openFiles[id]->Read(Buffer, CharCounter)) > 0){   //Doc file thanh cong
+        NextAddress = fileSystem->openFiles[id]->GetCurrentPos();       
+        machine->System2User(Address, NextAddress - PrevAddress + 1, Buffer);
+        machine->WriteRegister(2, NextAddress - PrevAddress + 1);
+    }
+    else {
+        //Doc file rong
+        printf("File rong\n");
+        machine->WriteRegister(2, -2);
+    }
+    delete[] Buffer;
+    return;
 }
-void WriteFileSyscallHandler(){}
+
+void PrintStringSyscallHandler(){
+    int virtAddr = getArg(1);
+    int cur = 0;
+    char *buffer;
+    buffer = machine->User2System(virtAddr, MAX_STRING_LENGTH);
+    while (buffer[cur] != 0 && buffer[cur] != '\n'){
+        gSynchConsole->Write(buffer+cur, 1);
+        cur++;
+    }
+    buffer[cur] = '\n';
+    gSynchConsole->Write(buffer + cur, 1);
+    delete[] buffer;
+}
+
+void WriteFileSyscallHandler(){
+    // int Write(char * buffer, int CharCounter, OpenFileidentifier identifier)
+	// Return -1: FAIL
+	// Return So byte ghi duoc: Succeed
+	// Return -2: Succeed
+    int PrevAddress;
+    int NextAddress;
+    int Address = machine->ReadRegister(4);
+    int CharCounter = machine->ReadRegister(5);
+    int id =  machine->ReadRegister(6);
+
+    if (fileSystem->openFiles[id] == NULL) {
+        printf("File khong ton tai\n");
+        machine->WriteRegister(2, -1);
+        return;
+    }
+
+    if (id < 0 || id > MAX_OPEN_FILE) {
+        machine->WriteRegister(2, -1);
+        return;
+    }
+
+    if(fileSystem->openFiles[id]->type % 2 == 0){            //Read only or stdin -> can't write on it
+        printf("Khong the ghi");
+        machine->WriteRegister(2, -1);
+        return;
+    }
+
+    char *Buffer;
+    PrevAddress = fileSystem->openFiles[id]->GetCurrentPos();
+    Buffer = machine->User2System(Address, CharCounter);
+
+    //Write to console(stdout)
+    if(fileSystem->openFiles[id]->type == 3){
+        int cur = 0;
+        printf("stdout mode\n");
+        while(Buffer[cur] != 0 && Buffer[cur] != '\n'){
+            gSynchConsole->Write(Buffer + cur, 1);
+            cur++;
+        }
+        Buffer[cur] = '\n';
+        gSynchConsole->Write(Buffer + cur, 1);
+        machine->WriteRegister(2, cur - 1);
+    }
+
+    //Write to file
+    if ((fileSystem->openFiles[id]->Write(Buffer, CharCounter)) > 0) {
+        NextAddress = fileSystem->openFiles[id]->GetCurrentPos();
+        machine->WriteRegister(2, NextAddress - PrevAddress + 1);
+    }
+    delete[] Buffer;
+    return;
+}
+
+void SeekFileSyscallHandler(){
+    int pos = machine->ReadRegister(4);
+    int fileID = machine->ReadRegister(5);
+
+    if (fileID < 0 || fileID > MAX_OPEN_FILE) {
+        machine->WriteRegister(2, -1);
+        return;
+    }
+
+    if (fileSystem->openFiles[fileID] == NULL) {
+        machine->WriteRegister(2, -1);
+        return;
+    }
+
+    if(pos == -1)
+        pos = fileSystem->openFiles[fileID]->Length();
+
+    if (pos > fileSystem->openFiles[fileID]->Length() || pos < 0) {
+        machine->WriteRegister(2, -1);
+    } 
+    else {
+        fileSystem->openFiles[fileID]->Seek(pos);
+        machine->WriteRegister(2, pos);
+    }
+}
 
 void SyscallExceptionHandler(int type)
 {
@@ -198,23 +326,31 @@ void SyscallExceptionHandler(int type)
 			printf ("\n\n Shutdown, initiated by user program.");
 			interrupt->Halt();
 			break;
+		case SC_PrintString:
+			PrintStringSyscallHandler();
+			break;
 		case SC_Create:
-			CreateFileSysCallHandler();
+			CreateFileSyscallHandler();
 			break;
 		case SC_Open:
+			OpenFileSyscallHandler();
 			break;
 		case SC_Read:
 			ReadFileSyscallHandler();
 			break;
 		case SC_Write:
+            WriteFileSyscallHandler();
 			break;
+        case SC_Seek:
+            SeekFileSyscallHandler();
+            break;
 		case SC_Close:
+			CloseFileSyscallHandler();
 			break;
-		default:
-			printf("\n SyscalException: Unexpected system call %d", type);
-			interrupt->Halt();
 	}
-	IncPCReg();
+	machine->registers[PrevPCReg] = machine->registers[PCReg];	
+	machine->registers[PCReg] = machine->registers[NextPCReg];
+	machine->registers[NextPCReg] += 4;
 }
 
 void
@@ -254,8 +390,6 @@ ExceptionHandler(ExceptionType which)
 		case SyscallException:
 			int type = machine->ReadRegister(2);
 			SyscallExceptionHandler(type);
-			DEBUG('a', "\n Incrementing PC.");
-			IncPCReg();
 			break;
 		default:
 			printf("\n Unexpected user mode exception (%d %d)", which, type);	

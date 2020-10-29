@@ -83,73 +83,73 @@ FileSystem::FileSystem(bool format)
     if (format) {
         BitMap *freeMap = new BitMap(NumSectors);
         Directory *directory = new Directory(NumDirEntries);
-	FileHeader *mapHdr = new FileHeader;
-	FileHeader *dirHdr = new FileHeader;
+        FileHeader *mapHdr = new FileHeader;
+        FileHeader *dirHdr = new FileHeader;
 
         DEBUG('f', "Formatting the file system.\n");
 
-    // First, allocate space for FileHeaders for the directory and bitmap
-    // (make sure no one else grabs these!)
-	freeMap->Mark(FreeMapSector);	    
-	freeMap->Mark(DirectorySector);
+        // First, allocate space for FileHeaders for the directory and bitmap
+        // (make sure no one else grabs these!)
+        freeMap->Mark(FreeMapSector);	    
+        freeMap->Mark(DirectorySector);
 
-    // Second, allocate space for the data blocks containing the contents
-    // of the directory and bitmap files.  There better be enough space!
+        // Second, allocate space for the data blocks containing the contents
+        // of the directory and bitmap files.  There better be enough space!
 
-	ASSERT(mapHdr->Allocate(freeMap, FreeMapFileSize));
-	ASSERT(dirHdr->Allocate(freeMap, DirectoryFileSize));
+        ASSERT(mapHdr->Allocate(freeMap, FreeMapFileSize));
+        ASSERT(dirHdr->Allocate(freeMap, DirectoryFileSize));
 
-    // Flush the bitmap and directory FileHeaders back to disk
-    // We need to do this before we can "Open" the file, since open
-    // reads the file header off of disk (and currently the disk has garbage
-    // on it!).
+        // Flush the bitmap and directory FileHeaders back to disk
+        // We need to do this before we can "Open" the file, since open
+        // reads the file header off of disk (and currently the disk has garbage
+        // on it!).
 
         DEBUG('f', "Writing headers back to disk.\n");
-	mapHdr->WriteBack(FreeMapSector);    
-	dirHdr->WriteBack(DirectorySector);
+        mapHdr->WriteBack(FreeMapSector);    
+        dirHdr->WriteBack(DirectorySector);
 
-    // OK to open the bitmap and directory files now
-    // The file system operations assume these two files are left open
-    // while Nachos is running.
+        // OK to open the bitmap and directory files now
+        // The file system operations assume these two files are left open
+        // while Nachos is running.
 
         freeMapFile = new OpenFile(FreeMapSector);
         directoryFile = new OpenFile(DirectorySector);
-     
-    // Once we have the files "open", we can write the initial version
-    // of each file back to disk.  The directory at this point is completely
-    // empty; but the bitmap has been changed to reflect the fact that
-    // sectors on the disk have been allocated for the file headers and
-    // to hold the file data for the directory and bitmap.
+         
+        // Once we have the files "open", we can write the initial version
+        // of each file back to disk.  The directory at this point is completely
+        // empty; but the bitmap has been changed to reflect the fact that
+        // sectors on the disk have been allocated for the file headers and
+        // to hold the file data for the directory and bitmap.
 
         DEBUG('f', "Writing bitmap and directory back to disk.\n");
-	freeMap->WriteBack(freeMapFile);	 // flush changes to disk
-	directory->WriteBack(directoryFile);
+        freeMap->WriteBack(freeMapFile);	 // flush changes to disk
+        directory->WriteBack(directoryFile);
 
-	if (DebugIsEnabled('f')) {
-	    freeMap->Print();
-	    directory->Print();
+        if (DebugIsEnabled('f')) {
+            freeMap->Print();
+            directory->Print();
 
-        delete freeMap; 
-	delete directory; 
-	delete mapHdr; 
-	delete dirHdr;
-	}
+            delete freeMap; 
+            delete directory; 
+            delete mapHdr; 
+            delete dirHdr;
+        }
     } else {
-    // if we are not formatting the disk, just open the files representing
-    // the bitmap and directory; these are left open while Nachos is running
+        // if we are not formatting the disk, just open the files representing
+        // the bitmap and directory; these are left open while Nachos is running
         freeMapFile = new OpenFile(FreeMapSector);
         directoryFile = new OpenFile(DirectorySector);
-	openFiles = new OpenFile*[maxFile];
-	size = 0;
-	for(int i = 0;i < maxFile;i++)
-		openFiles[i] = NULL;
-	if(Create("stdin", 0)){
-		openFiles[size++] = this->Open("stdin", 2);
-	}
-	if(Create("stdin", 0)){
-		openFiles[size++] = this->Open("stdout", 3);
-	}
     }
+	openFiles = new OpenFile*[MAX_OPEN_FILE];
+	size = 0;
+	for (int i = 0; i < MAX_OPEN_FILE; ++i){
+		openFiles[i] = NULL;
+	}
+	this->Create("stdin", 0);
+	this->Create("stdout", 0);
+
+	this->Open("stdin", 2);
+	this->Open("stdout", 3);
 }
 
 //----------------------------------------------------------------------
@@ -196,7 +196,7 @@ FileSystem::Create(char *name, int initialSize)
     directory->FetchFrom(directoryFile);
 
     if (directory->Find(name) != -1)
-      success = FALSE;			// file is already in directory
+        success = FALSE;			// file is already in directory
     else {	
         freeMap = new BitMap(NumSectors);
         freeMap->FetchFrom(freeMapFile);
@@ -205,19 +205,19 @@ FileSystem::Create(char *name, int initialSize)
             success = FALSE;		// no free block for file header 
         else if (!directory->Add(name, sector))
             success = FALSE;	// no space in directory
-	else {
-    	    hdr = new FileHeader;
-	    if (!hdr->Allocate(freeMap, initialSize))
-            	success = FALSE;	// no space on disk for data
-	    else {	
-	    	success = TRUE;
-		// everthing worked, flush all changes back to disk
-    	    	hdr->WriteBack(sector); 		
-    	    	directory->WriteBack(directoryFile);
-    	    	freeMap->WriteBack(freeMapFile);
-	    }
+        else {
+            hdr = new FileHeader;
+            if (!hdr->Allocate(freeMap, initialSize))
+                success = FALSE;	// no space on disk for data
+            else {	
+                success = TRUE;
+                // everthing worked, flush all changes back to disk
+                hdr->WriteBack(sector); 		
+                directory->WriteBack(directoryFile);
+                freeMap->WriteBack(freeMapFile);
+            }
             delete hdr;
-	}
+        }
         delete freeMap;
     }
     delete directory;
@@ -234,8 +234,7 @@ FileSystem::Create(char *name, int initialSize)
 //	"name" -- the text name of the file to be opened
 //----------------------------------------------------------------------
 
-OpenFile *
-FileSystem::Open(char *name)
+int FileSystem::Open(char *name)
 { 
     Directory *directory = new Directory(NumDirEntries);
     int sector;
@@ -243,30 +242,42 @@ FileSystem::Open(char *name)
     DEBUG('f', "Opening file %s\n", name);
     directory->FetchFrom(directoryFile);
     sector = directory->Find(name); 
-    if (sector >= 0){
-		openFiles[size++] = new OpenFile(sector);	// name was found in directory 
-		return openFile[size-1];
-	}
     delete directory;
-    return openFile;				// return NULL if not found
+    if (sector >= 0){
+        for(int i = 0;i < MAX_OPEN_FILE;i++){
+            if(openFiles[i] == NULL){
+                openFiles[i] = new OpenFile(sector);
+                return i;
+            }
+        }
+        openFiles[size++] = new OpenFile(sector);
+        return size - 1;
+    }
+    return -1;
 }
 
-OpenFile *
-FileSystem::Open(char *name, int type)
-{ 
+int FileSystem::Open(char *name, int type)
+{
     Directory *directory = new Directory(NumDirEntries);
     int sector;
 
     DEBUG('f', "Opening file %s\n", name);
     directory->FetchFrom(directoryFile);
     sector = directory->Find(name); 
-    if (sector >= 0){
-		openFiles[size++] = new OpenFile(sector, type);	// name was found in directory 
-		return openFile[size-1];
-	}
     delete directory;
-    return openFile;				// return NULL if not found
+    if (sector >= 0){
+        for(int i = 0;i < MAX_OPEN_FILE;i++){
+            if(openFiles[i] == NULL){
+                openFiles[i] = new OpenFile(sector, type);
+                return i;
+            }
+        }
+        openFiles[size++] = new OpenFile(sector, type);
+        return size - 1;
+    }
+    return -1;
 }
+
 //----------------------------------------------------------------------
 // FileSystem::Remove
 // 	Delete a file from the file system.  This requires:

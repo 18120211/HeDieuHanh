@@ -74,6 +74,14 @@ Join:
 	j	$31
 	.end Join
 
+	.globl PrintString
+	.ent	PrintString
+PrintString:
+	addiu $2,$0,SC_PrintString
+	syscall
+	j	$31
+	.end PrintString
+
 	.globl Create
 	.ent	Create
 Create:
@@ -113,6 +121,14 @@ Close:
 	syscall
 	j	$31
 	.end Close
+
+	.globl Seek
+	.ent	Seek
+Seek:
+	addiu $2,$0,SC_Seek
+	syscall
+	j	$31
+	.end Seek
 
 	.globl Fork
 	.ent	Fork

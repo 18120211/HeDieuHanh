@@ -38,8 +38,8 @@ Copy(char *from, char *to)
 
 // Open UNIX file
     if ((fp = fopen(from, "r")) == NULL) {	 
-	printf("Copy: couldn't open input file %s\n", from);
-	return;
+        printf("Copy: couldn't open input file %s\n", from);
+        return;
     }
 
 // Figure out length of UNIX file
@@ -50,12 +50,17 @@ Copy(char *from, char *to)
 // Create a Nachos file of the same length
     DEBUG('f', "Copying file %s, size %d, to file %s\n", from, fileLength, to);
     if (!fileSystem->Create(to, fileLength)) {	 // Create Nachos file
-	printf("Copy: couldn't create output file %s\n", to);
-	fclose(fp);
-	return;
+        printf("Copy: couldn't create output file %s\n", to);
+        fclose(fp);
+        return;
     }
     
-    openFile = fileSystem->Open(to);
+    int fileID = fileSystem->Open(to);
+    if(fileID == -1)
+        openFile = NULL;
+    else
+        openFile = fileSystem->openFiles[fileID];
+
     ASSERT(openFile != NULL);
     
 // Copy the data in TransferSize chunks
@@ -75,21 +80,24 @@ Copy(char *from, char *to)
 //----------------------------------------------------------------------
 
 void
-Print(char *name)
-{
-    OpenFile *openFile;    
+Print(char *name){
+    OpenFile *openFile = NULL;
     int i, amountRead;
     char *buffer;
 
-    if ((openFile = fileSystem->Open(name)) == NULL) {
-	printf("Print: unable to open file %s\n", name);
-	return;
+    int fileID = fileSystem->Open(name);
+    if(fileID != -1)
+        openFile = fileSystem->openFiles[fileID];
+
+    if (openFile == NULL) {
+        printf("Print: unable to open file %s\n", name);
+        return;
     }
     
     buffer = new char[TransferSize];
     while ((amountRead = openFile->Read(buffer, TransferSize)) > 0)
-	for (i = 0; i < amountRead; i++)
-	    printf("%c", buffer[i]);
+        for (i = 0; i < amountRead; i++)
+            printf("%c", buffer[i]);
     delete [] buffer;
 
     delete openFile;		// close the Nachos file
@@ -116,7 +124,7 @@ Print(char *name)
 static void 
 FileWrite()
 {
-    OpenFile *openFile;    
+    OpenFile *openFile = NULL;    
     int i, numBytes;
 
     printf("Sequential write of %d byte file, in %d byte chunks\n", 
@@ -125,18 +133,22 @@ FileWrite()
       printf("Perf test: can't create %s\n", FileName);
       return;
     }
-    openFile = fileSystem->Open(FileName);
+    
+    int fileID = fileSystem->Open(FileName);
+    if(fileID != -1)
+        openFile = fileSystem->openFiles[fileID];
+
     if (openFile == NULL) {
-	printf("Perf test: unable to open %s\n", FileName);
-	return;
+        printf("Perf test: unable to open %s\n", FileName);
+        return;
     }
     for (i = 0; i < FileSize; i += ContentSize) {
         numBytes = openFile->Write(Contents, ContentSize);
-	if (numBytes < 10) {
-	    printf("Perf test: unable to write %s\n", FileName);
-	    delete openFile;
-	    return;
-	}
+        if (numBytes < 10) {
+            printf("Perf test: unable to write %s\n", FileName);
+            delete openFile;
+            return;
+        }
     }
     delete openFile;	// close file
 }
@@ -144,26 +156,29 @@ FileWrite()
 static void 
 FileRead()
 {
-    OpenFile *openFile;    
+    OpenFile *openFile = NULL;
     char *buffer = new char[ContentSize];
     int i, numBytes;
 
     printf("Sequential read of %d byte file, in %d byte chunks\n", 
 	FileSize, ContentSize);
 
-    if ((openFile = fileSystem->Open(FileName)) == NULL) {
-	printf("Perf test: unable to open file %s\n", FileName);
-	delete [] buffer;
-	return;
+    int fileID = fileSystem->Open(FileName);
+    if(fileID != -1)
+        openFile = fileSystem->openFiles[fileID];
+    if (openFile == NULL) {
+        printf("Perf test: unable to open file %s\n", FileName);
+        delete [] buffer;
+        return;
     }
     for (i = 0; i < FileSize; i += ContentSize) {
         numBytes = openFile->Read(buffer, ContentSize);
-	if ((numBytes < 10) || strncmp(buffer, Contents, ContentSize)) {
-	    printf("Perf test: unable to read %s\n", FileName);
-	    delete openFile;
-	    delete [] buffer;
-	    return;
-	}
+        if ((numBytes < 10) || strncmp(buffer, Contents, ContentSize)) {
+            printf("Perf test: unable to read %s\n", FileName);
+            delete openFile;
+            delete [] buffer;
+            return;
+        }
     }
     delete [] buffer;
     delete openFile;	// close file
