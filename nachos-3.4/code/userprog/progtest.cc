@@ -23,12 +23,18 @@
 void
 StartProcess(char *filename)
 {
-    OpenFile *executable = fileSystem->Open(filename);
+    int fileID = fileSystem->Open(filename);
+    OpenFile *executable;
     AddrSpace *space;
 
+    if(fileID == -1)
+        executable = NULL;
+    else
+        executable = fileSystem->openFiles[fileID];
+
     if (executable == NULL) {
-	printf("Unable to open file %s\n", filename);
-	return;
+        printf("Unable to open file %s\n", filename);
+        return;
     }
     space = new AddrSpace(executable);    
     currentThread->space = space;
