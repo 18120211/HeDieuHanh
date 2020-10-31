@@ -224,8 +224,20 @@ void ReadFileSyscallHandler(){
     return;
 }
 
+//void ReadString(char * s, int length);
+void ReadStringSyscallHandler(){ //Cai nay la Phuong viet
+    int virtAddr = getArg(1); //Doc register 4, lay dia chi tham so buffer
+    int length = getArg(2); //Doc register 5, lay do dai toi da cua chuoi nhap vao
+    char *buffer;
+    buffer = machine->User2System(virtAddr,length);//Copy chuoi tu User Space sang System Space
+    gSynchConsole->Read(buffer, length);//Goi ham Read cua class SynchConsole de doc chuoi nguoi dung nhap
+    machine->System2User(virtAddr,length,buffer);//Copy chuoi tu System Space sang User Space
+    delete[] buffer;
+}
+
+//void PrintString(char * s);
 void PrintStringSyscallHandler(){
-    int virtAddr = getArg(1);
+    int virtAddr = getArg(1); //Doc register 4
     int cur = 0;
     char *buffer;
     buffer = machine->User2System(virtAddr, MAX_STRING_LENGTH);
@@ -236,6 +248,12 @@ void PrintStringSyscallHandler(){
     buffer[cur] = '\n';
     gSynchConsole->Write(buffer + cur, 1);
     delete[] buffer;
+}
+
+//void PrintChar(char c);
+void PrintCharSyscallHandler(){
+    char c = (char)machine->ReadRegister(4); // Doc ki tu tu thanh ghi r4
+	gSynchConsole->Write(&c, 1); // In ky tu tu bien c ra console
 }
 
 void WriteFileSyscallHandler(){
@@ -326,6 +344,9 @@ void SyscallExceptionHandler(int type)
 			printf ("\n\n Shutdown, initiated by user program.");
 			interrupt->Halt();
 			break;
+		case SC_ReadString:
+			ReadStringSyscallHandler();
+			break;
 		case SC_PrintString:
 			PrintStringSyscallHandler();
 			break;
@@ -353,8 +374,7 @@ void SyscallExceptionHandler(int type)
 	machine->registers[NextPCReg] += 4;
 }
 
-void
-ExceptionHandler(ExceptionType which)
+void ExceptionHandler(ExceptionType which)
 {
 	switch (which) {
 		case NoException:
@@ -395,3 +415,4 @@ ExceptionHandler(ExceptionType which)
 			printf("\n Unexpected user mode exception (%d %d)", which, type);	
 	}
 }
+
