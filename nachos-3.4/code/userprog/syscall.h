@@ -54,6 +54,7 @@ void PrintString(char * s);
 
 //Phuong
 void ReadString(char * s, int length);
+
 void PrintChar(char c);
 
 /* Address space control operations: Exit, Exec, and Join */
@@ -93,9 +94,9 @@ typedef int OpenFileId;
  * the console device.
  */
 
-#define ConsoleInput	0  
-#define ConsoleOutput	1  
- 
+#define stdin	0  
+#define stdout	1  
+
 /* Create a Nachos file, with "name" */
 int Create(char *name);
 

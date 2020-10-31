@@ -145,11 +145,12 @@ FileSystem::FileSystem(bool format)
 	for (int i = 0; i < MAX_OPEN_FILE; ++i){
 		openFiles[i] = NULL;
 	}
-	this->Create("stdin", 0);
-	this->Create("stdout", 0);
 
-	this->Open("stdin", 2);
-	this->Open("stdout", 3);
+    this->Create("filesys/stdin", 0);
+    this->Create("filesys/stdout",0);
+
+    this->Open("filesys/stdin", 2);
+    this->Open("filesys/stdout", 3);
 }
 
 //----------------------------------------------------------------------

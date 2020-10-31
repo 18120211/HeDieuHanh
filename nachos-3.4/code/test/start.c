@@ -128,7 +128,7 @@ Seek:
 	addiu $2,$0,SC_Seek
 	syscall
 	j	$31
-	.end Seek
+    .end Seek
 
 	.globl Fork
 	.ent	Fork
@@ -145,6 +145,23 @@ Yield:
 	syscall
 	j	$31
 	.end Yield
+
+	.globl ReadString
+	.ent	ReadString
+ReadString:
+	addiu $2,$0,SC_PrintString
+	syscall
+	j	$31
+    .end ReadString
+
+	.globl PrintChar
+	.ent	PrintChar
+PrintChar:
+	addiu $2,$0,SC_PrintChar
+	syscall
+	j	$31
+	.end PrintChar
+
 
 /* dummy function to keep gcc happy */
         .globl  __main
