@@ -31,6 +31,8 @@
 #define SC_Yield	10
 #define SC_PrintString	11
 #define SC_Seek     12
+#define SC_ReadString     13 //Phuong
+#define SC_PrintChar 14
 
 
 #ifndef IN_ASM
@@ -48,10 +50,14 @@
 /* Stop Nachos, and print out performance stats */
 void Halt();		
  
+void PrintString(char * s);
+
+//Phuong
+void ReadString(char * s, int length);
+
+void PrintChar(char c);
 
 /* Address space control operations: Exit, Exec, and Join */
-
-void PrintString(char * s);
 
 /* This user program is done (status = 0 means exited normally). */
 void Exit(int status);	
@@ -88,9 +94,9 @@ typedef int OpenFileId;
  * the console device.
  */
 
-#define ConsoleInput	0  
-#define ConsoleOutput	1  
- 
+#define stdin	0  
+#define stdout	1  
+
 /* Create a Nachos file, with "name" */
 int Create(char *name);
 

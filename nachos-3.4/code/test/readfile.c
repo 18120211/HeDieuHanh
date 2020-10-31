@@ -9,17 +9,15 @@ int strlen(char * s){
 }
 
 int main(){
-    int input = Open("input.txt", 2);
-    int output = Open("output.txt", 1);
+    int input = Open("son.txt", 0);
+    int output = Open("ngoc.txt", 1);
+
     char mes[100];
-    if(Read(mes, 100, input) == -1){
-        PrintString("Doc file khong thanh cong");
+    while(Read(mes, 100, input) > 0){
+        Write(mes, 100, output);
     }
-    else{
-        Seek(1, output);
-        Write(mes, strlen(mes), output);
-    }
-    Close(input);
+
     Close(output);
+    Close(input);
     Halt();
 }
