@@ -24,6 +24,7 @@ int main()
             Write(&c, 1, stdout);
         }
 		Close(file); // Goi ham Close de dong file
+
 	}
 	else {
 		PrintString(" -> Mo file khong thanh cong!!\n\n");
