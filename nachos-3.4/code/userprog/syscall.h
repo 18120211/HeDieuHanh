@@ -22,7 +22,7 @@
 #define SC_Exit		1
 #define SC_Exec		2
 #define SC_Join		3
-#define SC_Create	4
+#define SC_CreateFile	4
 #define SC_Open		5
 #define SC_Read		6
 #define SC_Write	7
@@ -98,7 +98,7 @@ typedef int OpenFileId;
 #define stdout	1  
 
 /* Create a Nachos file, with "name" */
-int Create(char *name);
+int CreateFile(char *name);
 
 /* Open the Nachos file "name", and return an "OpenFileId" that can 
  * be used to read and write to the file.
