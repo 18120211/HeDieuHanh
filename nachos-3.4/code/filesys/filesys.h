@@ -76,6 +76,10 @@ public:
 	}
 
     int Open(char *name) {
+        if(size == MAX_OPEN_FILE){
+            return -1;
+        }
+
         int fileDescriptor = OpenForReadWrite(name, FALSE);
 
         if (fileDescriptor == -1) 
@@ -87,11 +91,13 @@ public:
                 return i; 
             }
         }
-        openFiles[size++] = new OpenFile(fileDescriptor);
-        return size - 1;
     }
 
     int Open(char *name, int type) {
+        if(size == MAX_OPEN_FILE){
+            return -1;
+        }
+
         int fileDescriptor = OpenForReadWrite(name, FALSE);
 
         if (fileDescriptor == -1) 
@@ -102,8 +108,6 @@ public:
                 return i; 
             }
         }
-        openFiles[size++] = new OpenFile(fileDescriptor, type);
-        return size - 1;
     }
 		
     bool Remove(char *name){ 

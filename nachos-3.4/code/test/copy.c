@@ -3,7 +3,6 @@
 
 int main()
 {
-
 	int srcFileId;  //OpenFileID file nguon
 	int destFileId; //OpenFileID file goc
 	int fileSize;   //Do dai file
@@ -14,7 +13,6 @@ int main()
 	
 	PrintString("\n---------SAO CHEP FILE---------\n");
 	PrintString("Nhap ten file nguon: ");
-
     Read(source, MAX_LENGTH, stdin);        //Doc ten file nguon
 
 	PrintString("Nhap ten file dich: ");
@@ -25,7 +23,6 @@ int main()
 	{
 		
 		destFileId = Open(dest, 1); //Goi ham Open de mo file dich
-
 		if (destFileId != -1) //Neu mo file dich thanh cong thi
 		{
 			fileSize = Seek(-1, srcFileId); // Seek den cuoi file nguon de lay duoc do dai noi dung file nguon (fileSize)
@@ -51,10 +48,9 @@ int main()
 	}
 	else
 	{
-		PrintString("Khong mo duoc file nguon.");
+		PrintString("Khong mo duoc file.");
 	}
 	
     Halt();
-
 	return 0;
 }

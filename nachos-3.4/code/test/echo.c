@@ -2,7 +2,6 @@
 #include "copyright.h"
 #define MAX_LENGTH 255
 
-
 int main()
 {
     char buffer[MAX_LENGTH];
