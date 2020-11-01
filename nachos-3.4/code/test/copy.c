@@ -51,7 +51,7 @@ int main()
 	}
 	else
 	{
-		PrintString("Khong mo duoc file.");
+		PrintString("Khong mo duoc file nguon.");
 	}
 	
     Halt();
