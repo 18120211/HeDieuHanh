@@ -276,6 +276,9 @@ void WriteFileSyscallHandler(){
         NextAddress = fileSystem->openFiles[id]->GetCurrentPos();
         machine->WriteRegister(2, NextAddress - PrevAddress + 1);
     }
+    else{
+	machine->WriteRegister(2, -2);
+    }
     delete[] Buffer;
     return;
 }
