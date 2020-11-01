@@ -237,6 +237,9 @@ FileSystem::Create(char *name, int initialSize)
 
 int FileSystem::Open(char *name)
 { 
+    if(size == MAX_OPEN_FILE){
+        return -1;
+    }
     Directory *directory = new Directory(NumDirEntries);
     int sector;
 
@@ -251,14 +254,15 @@ int FileSystem::Open(char *name)
                 return i;
             }
         }
-        openFiles[size++] = new OpenFile(sector);
-        return size - 1;
     }
     return -1;
 }
 
 int FileSystem::Open(char *name, int type)
 {
+    if(size == MAX_OPEN_FILE){
+        return -1;
+    }
     Directory *directory = new Directory(NumDirEntries);
     int sector;
 
@@ -273,8 +277,6 @@ int FileSystem::Open(char *name, int type)
                 return i;
             }
         }
-        openFiles[size++] = new OpenFile(sector, type);
-        return size - 1;
     }
     return -1;
 }

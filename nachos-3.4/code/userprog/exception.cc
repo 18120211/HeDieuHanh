@@ -51,29 +51,35 @@
 //	are in machine.h.
 //----------------------------------------------------------------------
 
+// lay tham so tu User space.
 int getArg(int i){
 	return machine->ReadRegister(i+3);
 }
 
+/*
+ * int CreateFile(char * name)
+ * input:   name: Ten cua file muon tao
+ * output:  -1  : Loi
+ *           0  : Thanh cong
+ */
 void CreateFileSyscallHandler(){
-	int virtAddr;
-	char* filename;
+	int virtAddr;           	
+    char* filename;         //Ten cua file o System space
 
 	DEBUG('a',"\n SC_Create call ...");
 	DEBUG('a',"\n Reading virtual address of filename");
-	virtAddr = machine->ReadRegister(4);
+	virtAddr = getArg(1);   //Con tro tro den ten file trong User space
 	DEBUG ('a',"\n Reading filename.");
 	filename = machine->User2System(virtAddr, MAX_FILE_LENGTH + 1);
-	if (filename == NULL)
+	if (filename == NULL) //Khong cap phat duoc vung nho trong kernel de luu ten file
 	{
         printf("\n Not enough memory in system");
         DEBUG('a',"\n Not enough memory in system");
         machine->WriteRegister(2,-1); // trả về lỗi cho chương trình người dùng
-        delete[] filename;
         return;
 	}
 	DEBUG('a',"\n Finish reading filename.");
-	if (!fileSystem->Create(filename,0)){
+	if (!fileSystem->Create(filename,0)){   //Khong tao duoc file moi
         printf("\n Error create file '%s'",filename);
         machine->WriteRegister(2,-1);
         delete[] filename;
@@ -83,54 +89,70 @@ void CreateFileSyscallHandler(){
 	delete[] filename;
 }
 
-//OpenFileID Open(char* name, int type)
+/*
+ * OpenFileID Open(char* name, int type)
+ * input:   name: ten cua file muon mo
+ *          type: loai file
+ * output:  -1  : loi
+ *           0  : thanh cong
+ */
 void OpenFileSyscallHandler(){
-    int virtAddr = getArg(1);
-    int type = getArg(2);
-    if(type < 0 || type > 1){
+    int virtAddr = getArg(1);   //Con tro tro den file muon mo
+    int type = getArg(2);       //Loai file muon mo
+    if(type < 0 || type > 1){   //Chi mo file "chi doc" hoac "doc va ghi"
         machine->WriteRegister(2, -1);
         return;
     }
-    if (fileSystem->size > 10) {
+    if (fileSystem->size == MAX_OPEN_FILE) { //vuot qua so luong file quan ly
         machine->WriteRegister(2, -1);
         return;
     }
 
-    char * filename = machine->User2System(virtAddr, MAX_FILE_LENGTH);
-    if(type == 1){
+    char * filename = machine->User2System(virtAddr, MAX_FILE_LENGTH);  //Doc ten file vao kernel
+    if(type == 1){  //Neu mo file de ghi thi tao truoc khi mo
         fileSystem->Create(filename, 0);
     }
 
-    int fileID = fileSystem->Open(filename, type);
-    if (fileID != -1){
+    int fileID = fileSystem->Open(filename, type);  
+    if (fileID != -1){  
         DEBUG('f',"open file successfully");
-        machine->WriteRegister(2, fileID);
+        machine->WriteRegister(2, fileID);  //Neu tao duoc file thi tra ve id cua file
     } 
     else {
         DEBUG('f',"can not open file");
-        machine->WriteRegister(2, -1);
+        machine->WriteRegister(2, -1);      //Tra ve -1 neu loi
     }
     delete[] filename;
 }
 
-//int Close(OpenFileID id)
+/* 
+ * int Close(OpenFileID id)
+ * input:   id: id cua file muon dong
+ * output:  -1: loi
+ *           0: thanh cong
+ */
 void CloseFileSyscallHandler(){
-    int fileID = getArg(1);
-    if (fileID < 0 || fileID > 1 || fileSystem->openFiles[fileID] == NULL) {
-        machine->WriteRegister(2, -1);
+    int fileID = getArg(1);     //id cua file muon dong
+    if (fileID < 2 || fileID >= MAX_OPEN_FILE || fileSystem->openFiles[fileID] == NULL) {
+        machine->WriteRegister(2, -1);  //Neu id file khong ton tai thi tra ve -1
         return;
     }
-    delete fileSystem->openFiles[fileID];
-    fileSystem->openFiles[fileID] = NULL;
+    delete fileSystem->openFiles[fileID];   //Xoa file trong danh sach file quan ly
+    fileSystem->openFiles[fileID] = NULL;   
     fileSystem->size--;
     return;
 }
 
+/* 
+ * int Read(char *buffer, int charcount, OpenFileID id)
+ * input:   buffer: vung nho luu chuoi duoc doc
+ *          charcount: so ky tu toi da duoc doc
+ *          id: id cua file muon doc
+ * output:  -1: Loi
+ *          -2: File rong
+ *          len: so byte thuc su doc duoc
+ */
 void ReadFileSyscallHandler(){
-	// int Read(char *buffer, int charcount, OpenFileID id)
-	// Return -1: FAIL
-	// Return So byte doc duoc: Succeed
-	// Return -2: Thanh cong
     int PrevAddress;
     int NextAddress;
     int Address = getArg(1);                               //Address = gia tri thanh ghi 4
@@ -141,7 +163,7 @@ void ReadFileSyscallHandler(){
         return;
     }
 
-    if (id < 0 || id > MAX_OPEN_FILE) {			   //Truong hop id khong ton tai
+    if (id < 0 || id > MAX_OPEN_FILE) {
         machine->WriteRegister(2, -1);
         return;
     }
@@ -194,7 +216,6 @@ void PrintStringSyscallHandler(){
         gSynchConsole->Write(buffer+cur, 1);
         cur++;
     }
-    buffer[cur] = '\n';
     gSynchConsole->Write(buffer + cur, 1);
     delete[] buffer;
 }
@@ -205,23 +226,28 @@ void PrintCharSyscallHandler(){
 	gSynchConsole->Write(&c, 1); // In ky tu tu bien c ra console
 }
 
+/* 
+ * int Write(char * buffer, int CharCounter, OpenFileId id)
+ * input:   buffer: chuoi muon ghi
+ *          charCounter: so ki tu toi da ghi duoc
+ *          id: id cua file muon ghi
+ * output:  -1: Loi
+ *          -2: file rong
+ *          len: so byte thuc su duoc ghi
+ */
 void WriteFileSyscallHandler(){
-    // int Write(char * buffer, int CharCounter, OpenFileidentifier identifier)
-	// Return -1: FAIL
-	// Return So byte ghi duoc: Succeed
-	// Return -2: Succeed
     int PrevAddress;
     int NextAddress;
     int Address = machine->ReadRegister(4);
     int CharCounter = machine->ReadRegister(5);
     int id =  machine->ReadRegister(6);
 
-    if (fileSystem->openFiles[id] == NULL) {		    //File rong
+    if (fileSystem->openFiles[id] == NULL) {
         machine->WriteRegister(2, -1);
         return;
     }
 
-    if (id < 0 || id > MAX_OPEN_FILE) {			    //Id file khong phu hop
+    if (id < 0 || id > MAX_OPEN_FILE) {
         machine->WriteRegister(2, -1);
         return;
     }
@@ -235,7 +261,7 @@ void WriteFileSyscallHandler(){
     char * Buffer = machine->User2System(Address, CharCounter);
 
     //Write to console(stdout)
-    if(fileSystem->openFiles[id]->type == 3){			//Truong hop doc file stdout
+    if(fileSystem->openFiles[id]->type == 3){
         int cur = 0;
         while(Buffer[cur] != 0 && Buffer[cur] != '\n'){
             gSynchConsole->Write(Buffer + cur, 1);
@@ -250,35 +276,39 @@ void WriteFileSyscallHandler(){
         NextAddress = fileSystem->openFiles[id]->GetCurrentPos();
         machine->WriteRegister(2, NextAddress - PrevAddress + 1);
     }
-    else {
-	machine->WriteRegister(2, -2);
-    }
     delete[] Buffer;
     return;
 }
 
+/*
+ * Seek(int pos, OpenFileId id)
+ * input:   pos: vi tri offset muon den
+ *          id : id cua file
+ * output:  -1 : loi
+ *          pos: neu thanh cong
+ */
 void SeekFileSyscallHandler(){
-    int pos = machine->ReadRegister(4);
-    int fileID = machine->ReadRegister(5);
+    int pos = getArg(1);                            //vi tri offset muon den
+    int fileID = getArg(2);                         //ID cua file
 
-    if (fileID < 0 || fileID > MAX_OPEN_FILE) {
+    if (fileID < 2 || fileID > MAX_OPEN_FILE) {     //Neu file dang khong mo thi tra ve -1
         machine->WriteRegister(2, -1);
         return;
     }
 
-    if (fileSystem->openFiles[fileID] == NULL) {
+    if (fileSystem->openFiles[fileID] == NULL) {    //ID cua file khong hop le
         machine->WriteRegister(2, -1);
         return;
     }
 
-    if(pos == -1)
+    if(pos == -1)                                   //neu pos = -1 thi seek den cuoi file
         pos = fileSystem->openFiles[fileID]->Length();
 
     if (pos > fileSystem->openFiles[fileID]->Length() || pos < 0) {
-        machine->WriteRegister(2, -1);
+        machine->WriteRegister(2, -1);              //Offset moi nam ngoai kich thuoc file
     } 
     else {
-        fileSystem->openFiles[fileID]->Seek(pos);
+        fileSystem->openFiles[fileID]->Seek(pos);   //Di chuyen den offset moi
         machine->WriteRegister(2, pos);
     }
 }
@@ -297,7 +327,7 @@ void SyscallExceptionHandler(int type)
 		case SC_PrintString:
 			PrintStringSyscallHandler();
 			break;
-		case SC_Create:
+		case SC_CreateFile:
 			CreateFileSyscallHandler();
 			break;
 		case SC_Open:
