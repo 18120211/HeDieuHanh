@@ -276,9 +276,6 @@ void WriteFileSyscallHandler(){
         NextAddress = fileSystem->openFiles[id]->GetCurrentPos();
         machine->WriteRegister(2, NextAddress - PrevAddress + 1);
     }
-    else{
-	machine->WriteRegister(2, -2);
-    }
     delete[] Buffer;
     return;
 }
@@ -316,6 +313,39 @@ void SeekFileSyscallHandler(){
     }
 }
 
+void StartProcess(int arg){
+    currentThread->space->InitRegisters();      //Set the initial register values
+    currentThread->space->RestoreState();       //Load page table register
+    printf("Run child process\n");
+    machine->Run();
+    ASSERT(FALSE);
+}
+
+//SpaceID Exec(char * filename)
+void ExecSyscallHandler(){
+    int virtAddr = getArg(1);
+    char * filename = machine->User2System(virtAddr, MAX_FILE_LENGTH);
+    int fileID = fileSystem->Open(filename);
+    OpenFile* executable;
+    AddrSpace * space;
+
+    if(fileID == -1)
+        executable = NULL;
+    else
+        executable = fileSystem->openFiles[fileID];
+
+    if(executable == NULL){
+        printf("Unable to open file %s\n", filename);
+        machine->WriteRegister(2, -1);
+        return;
+    }
+    Thread * newThread = new Thread("new thread");
+    machine->WriteRegister(2, newThread->spaceID);
+    space = new AddrSpace(executable);
+    newThread->space = space;
+    newThread->Fork(StartProcess, 0);
+}
+
 void SyscallExceptionHandler(int type)
 {
 	switch (type){
@@ -348,6 +378,9 @@ void SyscallExceptionHandler(int type)
 		case SC_Close:
 			CloseFileSyscallHandler();
 			break;
+        case SC_Exec:
+            ExecSyscallHandler();
+            break;
 	}
 	machine->registers[PrevPCReg] = machine->registers[PCReg];	
 	machine->registers[PCReg] = machine->registers[NextPCReg];

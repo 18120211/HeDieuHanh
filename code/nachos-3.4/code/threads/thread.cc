@@ -32,14 +32,18 @@
 //	"threadName" is an arbitrary string, useful for debugging.
 //----------------------------------------------------------------------
 
+int Thread::processNum = 0;
+
 Thread::Thread(char* threadName)
 {
-    name = threadName;
     stackTop = NULL;
     stack = NULL;
     status = JUST_CREATED;
 #ifdef USER_PROGRAM
     space = NULL;
+    spaceID = processNum;
+    processNum++;
+    name = threadName;
 #endif
 }
 
@@ -60,8 +64,10 @@ Thread::~Thread()
     DEBUG('t', "Deleting thread \"%s\"\n", name);
 
     ASSERT(this != currentThread);
-    if (stack != NULL)
-	DeallocBoundedArray((char *) stack, StackSize * sizeof(int));
+    if (stack != NULL){
+        DeallocBoundedArray((char *) stack, StackSize * sizeof(int));
+        processNum--;
+    }
 }
 
 //----------------------------------------------------------------------

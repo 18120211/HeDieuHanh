@@ -29,10 +29,10 @@
 // Definitions related to the size, and format of user memory
 
 #define PageSize 	SectorSize 	// set the page size equal to
-					// the disk sector size, for
-					// simplicity
+                                // the disk sector size, for
+                                // simplicity
 
-#define NumPhysPages    32
+#define NumPhysPages    128 
 #define MemorySize 	(NumPhysPages * PageSize)
 #define TLBSize		4		// if there is a TLB, make it small
 

@@ -77,20 +77,20 @@ class Thread {
   private:
     // NOTE: DO NOT CHANGE the order of these first two members.
     // THEY MUST be in this position for SWITCH to work.
-    int* stackTop;			 // the current stack pointer
+    int* stackTop;			             // the current stack pointer
     int machineState[MachineStateSize];  // all registers except for stackTop
 
   public:
     Thread(char* debugName);		// initialize a Thread 
-    ~Thread(); 				// deallocate a Thread
-					// NOTE -- thread being deleted
-					// must not be running when delete 
-					// is called
+    ~Thread(); 				        // deallocate a Thread
+					                // NOTE -- thread being deleted
+					                // must not be running when delete 
+					                // is called
 
     // basic thread operations
 
     void Fork(VoidFunctionPtr func, int arg); 	// Make thread run (*func)(arg)
-    void Yield();  				// Relinquish the CPU if any 
+    void Yield();  				                // Relinquish the CPU if any 
 						// other thread is runnable
     void Sleep();  				// Put the thread to sleep and 
 						// relinquish the processor
@@ -123,6 +123,8 @@ class Thread {
     int userRegisters[NumTotalRegs];	// user-level CPU register state
 
   public:
+    static int processNum;
+    int spaceID;
     void SaveUserState();		// save user-level register state
     void RestoreUserState();		// restore user-level register state
 
