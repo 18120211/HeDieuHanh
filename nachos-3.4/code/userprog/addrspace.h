@@ -15,27 +15,32 @@
 
 #include "copyright.h"
 #include "filesys.h"
+#include "bitmap.h"
 
 #define UserStackSize		1024 	// increase this as necessary!
+#define MaxThread   100
 
 class AddrSpace {
   public:
+
     AddrSpace(OpenFile *executable);	// Create an address space,
-					// initializing it with the program
-					// stored in the file "executable"
+                                        // initializing it with the program
+                                        // stored in the file "executable"
     ~AddrSpace();			// De-allocate an address space
 
     void InitRegisters();		// Initialize user-level CPU registers,
-					// before jumping to user code
+                                // before jumping to user code
 
     void SaveState();			// Save/restore address space-specific
     void RestoreState();		// info on a context switch 
 
-  private:
-    TranslationEntry *pageTable;	// Assume linear page table translation
-					// for now!
+    void ClearPage(int pos);
     unsigned int numPages;		// Number of pages in the virtual 
-					// address space
+                                // address space
+  private:
+    static BitMap * frameTable;
+    TranslationEntry *pageTable;	// Assume linear page table translation
+                                    // for now!
 };
 
 #endif // ADDRSPACE_H
