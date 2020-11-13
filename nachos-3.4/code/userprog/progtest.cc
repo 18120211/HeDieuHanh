@@ -46,8 +46,8 @@ StartProcess(char *filename)
 
     machine->Run();			// jump to the user progam
     ASSERT(FALSE);			// machine->Run never returns;
-					// the address space exits
-					// by doing the syscall "exit"
+                            // the address space exits
+                            // by doing the syscall "exit"
 }
 
 // Data structures needed for the console test.  Threads making

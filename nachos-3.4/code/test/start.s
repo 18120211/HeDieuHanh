@@ -82,13 +82,13 @@ PrintString:
 	j	$31
 	.end PrintString
 
-	.globl Create
-	.ent	Create
-Create:
-	addiu $2,$0,SC_Create
+	.globl CreateFile
+	.ent	CreateFile
+CreateFile:
+	addiu $2,$0,SC_CreateFile
 	syscall
 	j	$31
-	.end Create
+	.end CreateFile
 
 	.globl Open
 	.ent	Open

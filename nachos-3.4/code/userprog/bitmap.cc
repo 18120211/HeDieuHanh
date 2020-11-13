@@ -91,8 +91,7 @@ BitMap::Test(int which)
 //	If no bits are clear, return -1.
 //----------------------------------------------------------------------
 
-int 
-BitMap::Find() 
+int BitMap::Find() 
 {
     for (int i = 0; i < numBits; i++)
 	if (!Test(i)) {
@@ -131,8 +130,10 @@ BitMap::Print()
 {
     printf("Bitmap set:\n"); 
     for (int i = 0; i < numBits; i++)
-	if (Test(i))
-	    printf("%d, ", i);
+        if (Test(i))
+            printf("%d, ", 1);
+        else
+            printf("%d, ", 0);
     printf("\n"); 
 }
 
