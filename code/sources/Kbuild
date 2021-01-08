@@ -1,0 +1,6 @@
+#cd /home/iris/ldd/phan_1/bai_1_3
+#vim Kbuild
+
+EXTRA_CFLAGS = -Wall
+
+obj-m        = random_module.o
